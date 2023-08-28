@@ -32,6 +32,6 @@ public class ConfirmationToken {
             nullable = false,
             name = "user_id"
     )
-    private Users user;
+    private UsersBase user;
 
 }

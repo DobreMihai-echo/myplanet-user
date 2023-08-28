@@ -1,7 +1,7 @@
 package com.myplanet.userservice.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.myplanet.userservice.domain.Users;
+import com.myplanet.userservice.domain.UsersBase;
 import com.myplanet.userservice.payload.LoginRequest;
 import com.myplanet.userservice.payload.LoginResponse;
 import com.myplanet.userservice.payload.SignupRequest;
@@ -34,6 +34,7 @@ public class AuthenticationController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
+            System.out.println("LOGIN REQUEST:" + loginRequest);
             Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
                     loginRequest.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -51,9 +52,9 @@ public class AuthenticationController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody SignupRequest request) throws JsonProcessingException {
-        Users users = service.registerUser(request);
+        UsersBase usersBase = service.registerUser(request);
 
-        return ResponseEntity.ok(users);
+        return ResponseEntity.ok(usersBase);
     }
 
     @GetMapping("/confirm")

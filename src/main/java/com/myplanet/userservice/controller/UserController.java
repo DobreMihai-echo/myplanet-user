@@ -3,6 +3,7 @@ package com.myplanet.userservice.controller;
 import com.myplanet.userservice.domain.Role;
 import com.myplanet.userservice.domain.UserResponse;
 import com.myplanet.userservice.domain.Users;
+import com.myplanet.userservice.domain.UsersBase;
 import com.myplanet.userservice.payload.RoleToUser;
 import com.myplanet.userservice.service.UsersService;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,8 @@ public class UserController {
     }
 
     @PostMapping("/user")
-    public ResponseEntity<Users> saveUser(@RequestBody Users users){
-        return ResponseEntity.ok().body(service.saveUser(users));
+    public ResponseEntity<UsersBase> saveUser(@RequestBody Users usersBase){
+        return ResponseEntity.ok().body(service.saveUser(usersBase));
     }
 
     @PostMapping("/role")
@@ -38,15 +39,15 @@ public class UserController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<Users> getUsser(@RequestParam(name = "username") String username) {
+    public ResponseEntity<UsersBase> getUsser(@RequestParam(name = "username") String username) {
         return ResponseEntity.ok().body(service.getUser(username));
     }
 
-    @PostMapping("/role/addToUser")
-    public ResponseEntity<?> addRoleToUser(@RequestBody RoleToUser roleToUser) {
-        service.addRoleToUer(roleToUser.getUsername(),roleToUser.getRoleName());
-        return ResponseEntity.ok().build();
-    }
+//    @PostMapping("/role/addToUser")
+//    public ResponseEntity<?> addRoleToUser(@RequestBody RoleToUser roleToUser) {
+//        service.addRoleToUer(roleToUser.getUsername(),roleToUser.getRoleName());
+//        return ResponseEntity.ok().build();
+//    }
 
     @GetMapping("/userid")
     public ResponseEntity<?> getUserById(@RequestParam(name = "userId") Long userId) {
@@ -77,7 +78,7 @@ public class UserController {
                                                    @RequestParam("size") Integer size) {
         page = page < 0 ? 0 : page-1;
         size = size <= 0 ? 5 : size;
-        List<Users> followingList = service.getFollowingUsersPaginate(userId, page, size);
+        List<UsersBase> followingList = service.getFollowingUsersPaginate(userId, page, size);
         return new ResponseEntity<>(followingList, HttpStatus.OK);
     }
 
@@ -87,7 +88,7 @@ public class UserController {
                                                   @RequestParam("size") Integer size) {
         page = page < 0 ? 0 : page-1;
         size = size <= 0 ? 5 : size;
-        List<Users> followingList = service.getFollowerUsersPaginate(userId, page, size);
+        List<UsersBase> followingList = service.getFollowerUsersPaginate(userId, page, size);
         return new ResponseEntity<>(followingList, HttpStatus.OK);
     }
 
@@ -114,7 +115,12 @@ public class UserController {
         return ResponseEntity.ok(service.addPoints(pointsToAdd));
     }
 
-    @PutMapping(value = "/user/organization/join")
+    @GetMapping(value = "/user/organizations")
+    public ResponseEntity<?> getOrganizations(@RequestParam(name = "username") String username) {
+        return ResponseEntity.ok(service.getOrganizationData(username));
+    }
+
+    @PutMapping(value = "/organization/join")
     public ResponseEntity<?> joinOrganization(@RequestParam Long organizationId) {
         service.joinOrganization(organizationId);
         return ResponseEntity.ok("Joined organization");
@@ -123,6 +129,16 @@ public class UserController {
     @GetMapping(value = "/organization")
     public ResponseEntity<?> getJoinersByRegion(@RequestParam(name = "organizationID") Long organizationID, @RequestParam(name = "country") String country) {
         return ResponseEntity.ok(service.getJoinersByRegion(organizationID, country));
+    }
+
+    @GetMapping(value = "/organization/joiners")
+    public ResponseEntity<?> getJoiners(@RequestParam(name = "organizationName") String organizationName) {
+        return ResponseEntity.ok(service.getJoiners(organizationName));
+    }
+
+    @PutMapping(value = "/organization/addRole")
+    public ResponseEntity<?> addRole(@RequestParam(name = "role") String role, @RequestParam(name = "organizationID") Long organizationID, @RequestParam(name = "userID") Long userID) {
+        return ResponseEntity.ok(service.addRole(role,organizationID,userID));
     }
 
     @PutMapping(value = "/user/plant-trees")

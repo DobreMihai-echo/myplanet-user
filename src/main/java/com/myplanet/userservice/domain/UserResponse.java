@@ -8,6 +8,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserResponse {
-    private Users user;
+    private UsersBase user;
     private Boolean followedByAuthUser;
 }

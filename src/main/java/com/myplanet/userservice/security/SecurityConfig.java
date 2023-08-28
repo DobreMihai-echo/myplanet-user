@@ -4,6 +4,7 @@ import com.myplanet.userservice.configuration.JWTAuthenticationEntryPoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -14,6 +15,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import static com.myplanet.userservice.domain.ERole.*;
+import static com.myplanet.userservice.domain.Permission.*;
 
 @Configuration
 @EnableWebSecurity
@@ -32,11 +36,15 @@ public class SecurityConfig  {
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
-                .authorizeRequests().antMatchers("/api/**").permitAll()
+                .authorizeRequests().antMatchers("/api/auth/**").permitAll()
+                .antMatchers("/api/user/**").hasAnyRole(USER.name())
+                .antMatchers("/api/organization/**").hasAnyRole(ORGANIZATION_USER.name())
+                .antMatchers(HttpMethod.GET,"/api/organization/**").hasAnyRole(ORGANIZATION_USER.name())
+                .antMatchers(HttpMethod.POST,"/api/organization/**").hasAuthority(ORGANIZATION_CREATE.name())
+                .antMatchers(HttpMethod.PUT,"/api/organization/**").hasAuthority(ORGANIZATION_UPDATE.name())
+                .antMatchers(HttpMethod.DELETE,"/api/organization/**").hasAuthority(ORGANIZATION_DELETE.name())
                 .antMatchers("/actuator/**").permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .httpBasic();
+                .anyRequest().authenticated();
 
         http.addFilterBefore(jwtRequestFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();

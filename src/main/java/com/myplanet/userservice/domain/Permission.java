@@ -6,10 +6,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum Permission {
 
-    ROLE_ORGANIZATION_READ("organization:read"),
-    ROLE_ORGANIZATION_UPDATE("organization:update"),
-    ROLE_ORGANIZATION_CREATE("organization:create"),
-    ROLE_ORGANIZATION_DELETE("organization:delete");
+    ORGANIZATION_READ("organization:read"),
+    ORGANIZATION_UPDATE("organization:update"),
+    ORGANIZATION_CREATE("organization:create"),
+    ORGANIZATION_DELETE("organization:delete");
 
 
     @Getter

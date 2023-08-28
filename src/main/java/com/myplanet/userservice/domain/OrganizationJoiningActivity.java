@@ -1,10 +1,10 @@
 package com.myplanet.userservice.domain;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDate;
@@ -13,7 +13,8 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
+@Getter
+@Setter
 public class OrganizationJoiningActivity {
 
     @Id
@@ -22,12 +23,13 @@ public class OrganizationJoiningActivity {
 
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
+    @JsonIgnore
     private Users users;
 
     @ManyToOne
     @JoinColumn(name = "organizationId", nullable = false)
     @JsonIgnore
-    private Users organization;
+    private Organization organization;
 
     private LocalDate date;
 }

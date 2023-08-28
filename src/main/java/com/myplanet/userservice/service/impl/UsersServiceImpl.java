@@ -5,16 +5,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.myplanet.userservice.domain.*;
 import com.myplanet.userservice.payload.CountryChartDataResponse;
+import com.myplanet.userservice.payload.OrganizationDTO;
 import com.myplanet.userservice.payload.SignupRequest;
 import com.myplanet.userservice.payload.TreeDataResponse;
-import com.myplanet.userservice.repository.RolesRepository;
-import com.myplanet.userservice.repository.TreePlantingRepository;
-import com.myplanet.userservice.repository.UsersRepository;
+import com.myplanet.userservice.repository.*;
 import com.myplanet.userservice.service.ConfirmationTokenService;
 import com.myplanet.userservice.service.UsersService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.User;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -23,9 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
-import javax.persistence.Tuple;
 import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,7 +33,9 @@ import java.util.stream.Collectors;
 @Transactional
 @Slf4j
 public class UsersServiceImpl implements UsersService {
+    private final UserBaseRepository userBaseRepository;
     private final UsersRepository userRepository;
+    private final OrganizationRepository organizationRepository;
     private final RolesRepository rolesRepository;
     private final ConfirmationTokenService confirmationTokenService;
     private final TreePlantingRepository treePlantingRepository;
@@ -48,33 +46,37 @@ public class UsersServiceImpl implements UsersService {
 
     @Override
     @Transactional
-    public Users registerUser(SignupRequest request) throws JsonProcessingException {
-        boolean userExists = userRepository.findByUsername(request.getUsername()).isPresent();
+    public UsersBase registerUser(SignupRequest request) throws JsonProcessingException {
+        boolean userExists = userBaseRepository.findByUsername(request.getUsername()).isPresent();
 
         if (userExists) {
             throw new IllegalStateException("Username already taken");
         }
         List<Role> userRoles = new ArrayList<>();
         String encodedPassword = encoder.encode(request.getPassword());
-        Users user;
+        UsersBase user;
         if (request.getOrganizationName()!=null) {
-            if (!rolesRepository.existsByName(ERole.ROLE_ORGANIZATION)) {
-                rolesRepository.save(new Role(ERole.ROLE_ORGANIZATION));
+            if (!rolesRepository.existsByName(ERole.ORGANIZATION)) {
+                rolesRepository.save(new Role(ERole.ORGANIZATION));
             }
 
-            userRoles.add(new Role(ERole.ROLE_ORGANIZATION));
-            user = Users.builder()
+            userRoles.add(new Role(ERole.ORGANIZATION));
+            System.out.println("ROLE REGISTRATION:" + userRoles);
+            user = Organization.builder()
                     .username(request.getUsername())
                     .email(request.getEmail())
                     .password(encodedPassword)
                     .organizationName(request.getOrganizationName())
                     .phone(request.getPhone())
+                    .treePlantingActivities(new ArrayList<>())
+                    .organizationJoiningActivities(new ArrayList<>())
                     .roles(userRoles)
                     .joiners(new ArrayList<>())
-                    .isOrganization(true)
+                    .enabled(false)
                     .build();
+            organizationRepository.save((Organization) user);
         } else {
-            userRoles.add(new Role(ERole.ROLE_USER));
+            userRoles.add(new Role(ERole.USER));
             user = Users.builder()
                     .username(request.getUsername())
                     .email(request.getEmail())
@@ -86,14 +88,17 @@ public class UsersServiceImpl implements UsersService {
                     .points(0D)
                     .followerCount(0)
                     .treePlantingActivities(new ArrayList<>())
+                    .organizationJoiningActivities(new ArrayList<>())
                     .followerCount(0)
                     .followerUsers(new ArrayList<>())
                     .followingUsers(new ArrayList<>())
                     .country(request.getCountry())
+                    .enabled(false)
                     .build();
+            userRepository.save((Users) user);
         }
 
-        userRepository.save(user);
+
 
         String token = UUID.randomUUID().toString();
         ConfirmationToken confirmationToken = ConfirmationToken.builder()
@@ -146,9 +151,10 @@ public class UsersServiceImpl implements UsersService {
     }
 
     private void enableAccount(String username) {
-        Users users = userRepository.findByUsername(username).orElseThrow();
-        users.setEnabled(true);
-        userRepository.save(users);
+        System.out.println("ALL USERS:" + userBaseRepository.findAll());
+        UsersBase usersBase = userBaseRepository.findByUsername(username).orElseThrow();
+        usersBase.setEnabled(true);
+        userBaseRepository.save(usersBase);
     }
 
     @Override
@@ -162,12 +168,7 @@ public class UsersServiceImpl implements UsersService {
     }
 
     @Override
-    public void addRoleToUer(String username, String roleName) {
-
-    }
-
-    @Override
-    public Users getUser(String username) {
+    public UsersBase getUser(String username) {
         return userRepository.findByUsername(username).orElseThrow();
     }
 
@@ -187,22 +188,23 @@ public class UsersServiceImpl implements UsersService {
     }
 
     @Override
-    public List<Users> getFollowerUsersPaginate(Long userId, Integer page, Integer size) {
-        Users targetUser = getUserById(userId);
+    public List<UsersBase> getFollowerUsersPaginate(Long userId, Integer page, Integer size) {
+        UsersBase targetUser = getUserById(userId);
         return new ArrayList<>(userRepository.findUsersByFollowingUsers(targetUser,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "firstName", "lastName"))));
     }
 
     @Override
-    public List<Users> getFollowingUsersPaginate(Long userId, Integer page, Integer size) {
-        Users targetUser = getUserById(userId);
+    public List<UsersBase> getFollowingUsersPaginate(Long userId, Integer page, Integer size) {
+        UsersBase targetUser = getUserById(userId);
         return new ArrayList<>(userRepository.findUsersByFollowerUsers(targetUser,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "firstName", "lastName"))));
     }
 
     @Override
     public void followUser(Long userId) {
-        Users authUser = getAuthenticatedUser();
+        UsersBase user = getAuthenticatedUser();
+        Users authUser = userRepository.findByUsername(user.getUsername()).orElseThrow();
         if (!authUser.getId().equals(userId)) {
             Users userToFollow = getUserById(userId);
             authUser.getFollowingUsers().add(userToFollow);
@@ -218,7 +220,8 @@ public class UsersServiceImpl implements UsersService {
 
     @Override
     public void unfollowUser(Long userId) {
-        Users authUser = getAuthenticatedUser();
+        UsersBase user = getAuthenticatedUser();
+        Users authUser = userRepository.findByUsername(user.getUsername()).orElseThrow();
         if (!authUser.getId().equals(userId)) {
             Users userToUnfollow = getUserById(userId);
             authUser.getFollowingUsers().remove(userToUnfollow);
@@ -242,7 +245,7 @@ public class UsersServiceImpl implements UsersService {
 
     @Override
     public UserResponse userToUserResponse(Users user) {
-        Users authUser = userRepository.findByUsername("test").get();
+        UsersBase authUser = userRepository.findByUsername("test").get();
         return UserResponse.builder()
                 .user(user)
                 .followedByAuthUser(user.getFollowerUsers().contains(authUser))
@@ -255,7 +258,6 @@ public class UsersServiceImpl implements UsersService {
     }
 
     public Users getAuthenticatedUser() {
-        System.out.println("userRepository: " + userRepository);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
             String authUsername = ((UserDetails) authentication.getPrincipal()).getUsername();
@@ -285,7 +287,7 @@ public class UsersServiceImpl implements UsersService {
     public void joinOrganization(Long organizationId) {
         Users authUser = getAuthenticatedUser();
         if (!authUser.getId().equals(organizationId)) {
-            Users organizationToJoin = getUserById(organizationId);
+            Organization organizationToJoin = organizationRepository.getById(organizationId);
             organizationToJoin.getJoiners().add(authUser);
             organizationToJoin.getOrganizationJoiningActivities().add(OrganizationJoiningActivity
                     .builder()
@@ -293,54 +295,96 @@ public class UsersServiceImpl implements UsersService {
                             .users(authUser)
                             .date(LocalDate.now())
                     .build());
-            userRepository.save(organizationToJoin);
+            organizationRepository.save(organizationToJoin);
+            authUser.getRoles().add(new Role(ERole.ORGANIZATION_USER));
+            userRepository.save(authUser);
         } else {
             throw new RuntimeException();
         }
     }
 
     @Override
-    public List<Users> getJoinersByRegion(Long organizationId, String country) {
-        return userRepository.findJoinersByOrganizationAndCountry(organizationId,country);
+    public Users addRole(String roleToAdd, Long organizationID, Long userID) {
+        Users userToAddRole = userRepository.findById(userID).orElseThrow();
+        if (!userToAddRole.getId().equals(organizationID)) {
+            Organization organization = organizationRepository.getById(organizationID);
+            if (organization.getJoiners().contains(userToAddRole)) {
+                if (rolesRepository.existsByName(ERole.valueOf(roleToAdd))) {
+                    userToAddRole.getRoles().add(rolesRepository.findByName(ERole.valueOf(roleToAdd)));
+                } else {
+                    userToAddRole.getRoles().add(new Role(ERole.valueOf(roleToAdd)));
+                }
+            }
+        }
+
+        return userRepository.save(userToAddRole);
     }
 
     @Override
-    public Users plantTree(Long userId, Long trees) {
+    public List<Users> getJoinersByRegion(Long organizationId, String country) {
+        return organizationRepository.findJoinersByOrganizationAndCountry(organizationId,country);
+    }
 
-        Users user = userRepository.findById(userId).orElseThrow();
-        TreePlantingActivity plantingActivity = treePlantingRepository.findByUsersAndDate(user,LocalDate.now());
+    @Override
+    public List<Users> getJoiners(String organizationName) {
+        return organizationRepository.findByOrganizationName(organizationName).getJoiners();
+    }
 
-        if (plantingActivity!=null) {
-            plantingActivity.setNumberOfTrees(plantingActivity.getNumberOfTrees() + trees);
-        } else {
-            plantingActivity = TreePlantingActivity.builder()
-                    .users(user)
-                    .date(LocalDate.now())
-                    .numberOfTrees(trees)
-                    .build();
-        }
+    @Override
+    public UsersBase plantTree(Long userId, Long trees) {
 
-        user.getTreePlantingActivities().add(plantingActivity);
+//        UsersBase user = userRepository.findById(userId).orElseThrow();
+//        TreePlantingActivity plantingActivity = treePlantingRepository.findByUsersAndDate(user,LocalDate.now());
+//
+//        if (plantingActivity!=null) {
+//            plantingActivity.setNumberOfTrees(plantingActivity.getNumberOfTrees() + trees);
+//        } else {
+//            plantingActivity = TreePlantingActivity.builder()
+//                    .usersBase(user)
+//                    .date(LocalDate.now())
+//                    .numberOfTrees(trees)
+//                    .build();
+//        }
+//
+//        user.getTreePlantingActivities().add(plantingActivity);
+//
+//        return userRepository.save(user);
 
-        return userRepository.save(user);
+        return null;
     }
 
     @Override
     public CountryChartDataResponse getInformation(String country, Long organizationID) {
-        List<Object[]> today = userRepository.findAverageTreesPlantedPerDay();
-        List<Object[]> otherDays = userRepository.findTotalTreesPlantedPerDay();
-        List<Object[]> avg = userRepository.findAverageTreesPlantedPerDayForCountryAndOrg(country,organizationID);
-        List<Object[]> fff = userRepository.findTotalTreesPlantedPerDayForCountryAndOrg(country,organizationID);
-
-
-
-        return CountryChartDataResponse.builder()
-                .today(convertToTreeDataResponse(today))
-                .otherDays(convertToTreeDataResponse(otherDays))
-                .findAverageTreesPlantedPerDay(convertToTreeDataResponse(avg))
-                .findAverageTreesPlantedPerDayForCountryAndOrg(convertToTreeDataResponse(fff))
-                .build();
+//        List<Object[]> today = userRepository.findAverageTreesPlantedPerDay();
+//        List<Object[]> otherDays = userRepository.findTotalTreesPlantedPerDay();
+//        List<Object[]> avg = userRepository.findAverageTreesPlantedPerDayForCountryAndOrg(country,organizationID);
+//        List<Object[]> fff = userRepository.findTotalTreesPlantedPerDayForCountryAndOrg(country,organizationID);
+//
+//
+//
+//        return CountryChartDataResponse.builder()
+//                .today(convertToTreeDataResponse(today))
+//                .otherDays(convertToTreeDataResponse(otherDays))
+//                .findAverageTreesPlantedPerDay(convertToTreeDataResponse(avg))
+//                .findAverageTreesPlantedPerDayForCountryAndOrg(convertToTreeDataResponse(fff))
+//                .build();
+        return null;
     }
+
+    @Override
+    public UsersBase changePermission(String roleName) {
+        return null;
+    }
+
+    @Override
+    public OrganizationDTO getOrganizationData(String username) {
+        List<OrganizationDTO> organizationDTOS = userRepository.findOrganizationNamesByUsername(username);
+        if (!organizationDTOS.isEmpty()) {
+            return organizationDTOS.get(0);
+        }
+        return null;
+    }
+
     private List<TreeDataResponse> convertToTreeDataResponse(List<Object[]> results){
         List<TreeDataResponse> responses = new ArrayList<>();
         for (Object[] result : results) {

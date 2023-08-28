@@ -6,20 +6,19 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
-public class AuthUser extends Users implements UserDetails {
+public class AuthUser extends UsersBase implements UserDetails {
 
-    public AuthUser(Users users) {
-        super(users);
+    public AuthUser(UsersBase usersBase) {
+        super(usersBase);
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        List<GrantedAuthority> grantedAuthorityList = new ArrayList<>();
+        List<SimpleGrantedAuthority> grantedAuthorityList = new ArrayList<>();
 
-        super.getRoles().forEach(role -> grantedAuthorityList.add(new SimpleGrantedAuthority(role.getName().name())));
+        super.getRoles().forEach(role -> grantedAuthorityList.addAll(role.getName().getAuthorities()));
         return grantedAuthorityList;
     }
 

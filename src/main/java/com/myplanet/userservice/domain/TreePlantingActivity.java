@@ -1,5 +1,6 @@
 package com.myplanet.userservice.domain;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +25,11 @@ public class TreePlantingActivity {
     @JoinColumn(name = "userID", nullable = false)
     @JsonIgnore
     private Users users;
+
+    @ManyToOne
+    @JoinColumn(name = "organizationId", nullable = false)
+    @JsonBackReference
+    private Organization organization;
 
     private LocalDate date;
 
