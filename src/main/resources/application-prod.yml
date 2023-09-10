@@ -1,0 +1,24 @@
+server:
+  port: 8080
+spring:
+  kafka:
+    producer:
+      bootstrap-servers: broker:9092
+      key-serializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-serializer: org.apache.kafka.common.serialization.StringDeserializer
+    topic:
+      name: myplanet_notification_topic
+  application:
+    name: user-service
+  datasource:
+    url: jdbc:postgresql://postgres-user-service:5432/userdb
+    username: userprod
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+
