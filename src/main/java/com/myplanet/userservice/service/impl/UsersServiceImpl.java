@@ -111,7 +111,7 @@ public class UsersServiceImpl implements UsersService {
 
         confirmationTokenService.generateConfirmationToken(confirmationToken);
 
-        String link = "http://localhost:8081/api/auth/confirm?token=" + token;
+        String link = "http://34.125.50.145:9761/api/auth/confirm?token=" + token;
 
         Message message = Message.builder()
                 .toEmail(user.getEmail())
