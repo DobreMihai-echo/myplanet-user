@@ -126,17 +126,19 @@
 					<from>
 						<image>openjdk:11</image>
 						<auth>
-							<username>hiluminatul</username>
-							<password>Ghostblade123!</password>
+<!--							<username>username</username>-->
+<!--							<password>password</password>-->
 						</auth>
 					</from>
 					<to>
-						<image>registry.hub.docker.com/hiluminatul/${project.artifactId}</image>
+<!--						<image>registry.hub.docker.com/usernamedockerregistry/${project.artifactId}</image>-->
+<!--						<tags>${project.version}</tags>-->
+<!--						<auth>-->
+<!--							<username>usernamme</username>-->
+<!--							<password>password</password>-->
+<!--						</auth>-->
+						<image>${REPO_URL}/${project.artifactId}</image>
 						<tags>${project.version}</tags>
-						<auth>
-							<username>hiluminatul</username>
-							<password>Ghostblade123!</password>
-						</auth>
 					</to>
 				</configuration>
 			</plugin>
