@@ -37,12 +37,15 @@ public class SecurityConfig  {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeRequests().antMatchers("/api/auth/**").permitAll()
-                .antMatchers("/api/user/**").hasAnyRole(USER.name())
-                .antMatchers("/api/organization/**").hasAnyRole(ORGANIZATION_USER.name())
-                .antMatchers(HttpMethod.GET,"/api/organization/**").hasAnyRole(ORGANIZATION_USER.name())
-                .antMatchers(HttpMethod.POST,"/api/organization/**").hasAuthority(ORGANIZATION_CREATE.name())
-                .antMatchers(HttpMethod.PUT,"/api/organization/**").hasAuthority(ORGANIZATION_UPDATE.name())
-                .antMatchers(HttpMethod.DELETE,"/api/organization/**").hasAuthority(ORGANIZATION_DELETE.name())
+                .antMatchers("/api/footprint/**").hasAnyRole(USER.name(),ORGANIZATION.name())
+                .antMatchers("/api/user/**").hasAnyRole(USER.name(),ORGANIZATION.name())
+                .antMatchers("/api/organization/join").hasAnyRole(USER.name())
+
+                .antMatchers(HttpMethod.GET,"/api/organization/**").hasAnyRole(USER.name(),ORGANIZATION_MANAGER.name(),ORGANIZATION_CREATE.name(),ORGANIZATION_UPDATE.name(),ORGANIZATION_DELETE.name())
+                .antMatchers(HttpMethod.POST,"/api/organization/**").hasAuthority(ORGANIZATION_MANAGER.name())
+                .antMatchers(HttpMethod.PUT,"/api/organization/**").hasAuthority(ORGANIZATION_MANAGER.name())
+                .antMatchers(HttpMethod.DELETE,"/api/organization/**").hasAuthority(ORGANIZATION_MANAGER.name())
+                .antMatchers("/api/organization/**").hasAnyRole(ORGANIZATION.name())
                 .antMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated();
 

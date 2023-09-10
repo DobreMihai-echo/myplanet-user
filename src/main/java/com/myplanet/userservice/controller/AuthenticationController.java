@@ -1,6 +1,7 @@
 package com.myplanet.userservice.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.myplanet.userservice.domain.Users;
 import com.myplanet.userservice.domain.UsersBase;
 import com.myplanet.userservice.payload.LoginRequest;
 import com.myplanet.userservice.payload.LoginResponse;

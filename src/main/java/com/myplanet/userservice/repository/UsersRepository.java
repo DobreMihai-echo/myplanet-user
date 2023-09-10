@@ -24,7 +24,4 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
     List<Users> findUsersByUsername(String name, Pageable pageable);
     List<Users> findByUsernameIn(List<String> username);
 
-    @Query("SELECT new com.myplanet.userservice.payload.OrganizationDTO(o.id, o.organizationName) FROM OrganizationJoiningActivity oja JOIN oja.organization o WHERE oja.users.username = :username")
-    List<OrganizationDTO> findOrganizationNamesByUsername(String username);
-
 }

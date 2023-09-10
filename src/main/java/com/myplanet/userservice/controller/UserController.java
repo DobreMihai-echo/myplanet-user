@@ -5,12 +5,14 @@ import com.myplanet.userservice.domain.UserResponse;
 import com.myplanet.userservice.domain.Users;
 import com.myplanet.userservice.domain.UsersBase;
 import com.myplanet.userservice.payload.RoleToUser;
+import com.myplanet.userservice.payload.UserProfileRequest;
 import com.myplanet.userservice.service.UsersService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +41,7 @@ public class UserController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<UsersBase> getUsser(@RequestParam(name = "username") String username) {
+    public ResponseEntity<Users> getUser(@RequestParam(name = "username") String username) {
         return ResponseEntity.ok().body(service.getUser(username));
     }
 
@@ -115,9 +117,18 @@ public class UserController {
         return ResponseEntity.ok(service.addPoints(pointsToAdd));
     }
 
-    @GetMapping(value = "/user/organizations")
+    @GetMapping(value = "/organizations")
     public ResponseEntity<?> getOrganizations(@RequestParam(name = "username") String username) {
         return ResponseEntity.ok(service.getOrganizationData(username));
+    }
+
+    @PutMapping(value = "/user/profile", consumes = "multipart/form-data")
+    public ResponseEntity<?> editProfile(@RequestParam(name = "profilePicture")MultipartFile profile, @RequestParam(name = "coverPicture") MultipartFile cover,@RequestParam(name = "username") String username, @RequestParam(name = "firstName") String firstName, @RequestParam(name = "lastName") String lastName, @RequestParam(name = "email") String email,@RequestParam(name = "phone") String phone , @RequestParam(name = "about") String about) {
+        try {
+            return ResponseEntity.ok(service.updateUserProfile(profile,cover,username,firstName,lastName,email,phone,about));
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body("An error occured:" + ex.getMessage());
+        }
     }
 
     @PutMapping(value = "/organization/join")

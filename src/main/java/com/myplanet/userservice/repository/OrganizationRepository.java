@@ -3,6 +3,7 @@ package com.myplanet.userservice.repository;
 import com.myplanet.userservice.domain.Organization;
 import com.myplanet.userservice.domain.Users;
 import com.myplanet.userservice.domain.UsersBase;
+import com.myplanet.userservice.payload.OrganizationDTO;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -37,4 +38,7 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
 
     @Query(value="SELECT DATE(t.date) as planting_date, AVG(t.number_of_trees) as avg_trees FROM tree_planting_activity t JOIN users u ON t.id = u.id WHERE u.country = :country AND u.id = :orgId GROUP BY DATE(t.date)", nativeQuery=true)
     List<Object[]> findAverageTreesPlantedPerDayForCountryAndOrg(@Param("country") String country, @Param("orgId") Long orgId);
+
+    @Query("SELECT new com.myplanet.userservice.payload.OrganizationDTO(o.id, o.organizationName) FROM OrganizationJoiningActivity oja JOIN oja.organization o WHERE oja.users.username = :username")
+    List<OrganizationDTO> findOrganizationNamesByUsername(String username);
 }

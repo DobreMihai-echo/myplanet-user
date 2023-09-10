@@ -6,9 +6,11 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 @Entity
@@ -30,14 +32,26 @@ public class Users extends UsersBase{
     @Column(name = "last_name")
     private String lastName;
 
-    @Column(name = "profile_picture")
-    private String profilePhoto;
+    @Type(type = "org.hibernate.type.BinaryType")
+    @Lob
+    private byte[] profilePhoto;
+
+    @Lob
+    @Type(type = "org.hibernate.type.BinaryType")
+    private byte[] coverPhoto;
 
     @OneToMany(mappedBy = "users", cascade = CascadeType.ALL)
     private List<TreePlantingActivity> treePlantingActivities;
 
     @OneToMany(mappedBy = "users", cascade = CascadeType.ALL)
     private List<OrganizationJoiningActivity> organizationJoiningActivities;
+
+    @OneToMany(mappedBy = "users", cascade = CascadeType.ALL)
+    private List<CarbonFootprint> carbonFootprints;
+
+    private String about;
+
+
 
     private Integer followerCount;
     private Integer followingCount;
@@ -59,6 +73,5 @@ public class Users extends UsersBase{
     private Double points;
 
     private String country;
-
 
 }

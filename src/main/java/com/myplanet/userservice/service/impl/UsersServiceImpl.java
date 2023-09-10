@@ -4,10 +4,7 @@ package com.myplanet.userservice.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.myplanet.userservice.domain.*;
-import com.myplanet.userservice.payload.CountryChartDataResponse;
-import com.myplanet.userservice.payload.OrganizationDTO;
-import com.myplanet.userservice.payload.SignupRequest;
-import com.myplanet.userservice.payload.TreeDataResponse;
+import com.myplanet.userservice.payload.*;
 import com.myplanet.userservice.repository.*;
 import com.myplanet.userservice.service.ConfirmationTokenService;
 import com.myplanet.userservice.service.UsersService;
@@ -21,8 +18,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.transaction.Transactional;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -86,12 +85,13 @@ public class UsersServiceImpl implements UsersService {
                     .phone(request.getPhone())
                     .roles(userRoles)
                     .points(0D)
-                    .followerCount(0)
+                    .followingCount(0)
                     .treePlantingActivities(new ArrayList<>())
                     .organizationJoiningActivities(new ArrayList<>())
                     .followerCount(0)
                     .followerUsers(new ArrayList<>())
                     .followingUsers(new ArrayList<>())
+                    .carbonFootprints(new ArrayList<>())
                     .country(request.getCountry())
                     .enabled(false)
                     .build();
@@ -151,7 +151,6 @@ public class UsersServiceImpl implements UsersService {
     }
 
     private void enableAccount(String username) {
-        System.out.println("ALL USERS:" + userBaseRepository.findAll());
         UsersBase usersBase = userBaseRepository.findByUsername(username).orElseThrow();
         usersBase.setEnabled(true);
         userBaseRepository.save(usersBase);
@@ -168,7 +167,7 @@ public class UsersServiceImpl implements UsersService {
     }
 
     @Override
-    public UsersBase getUser(String username) {
+    public Users getUser(String username) {
         return userRepository.findByUsername(username).orElseThrow();
     }
 
@@ -180,6 +179,21 @@ public class UsersServiceImpl implements UsersService {
     @Override
     public Users getUserById(Long id) {
         return userRepository.findById(id).get();
+    }
+
+    @Override
+    @Transactional
+    public Users updateUserProfile(MultipartFile profile,MultipartFile cover, String username, String firstName, String lastName, String email, String phone, String about) throws IOException {
+        Users userToUpdate = this.getAuthenticatedUser();
+        userToUpdate.setProfilePhoto(profile.getBytes());
+        userToUpdate.setCoverPhoto(cover.getBytes());
+        userToUpdate.setPhone(phone);
+        userToUpdate.setUsername(username);
+        userToUpdate.setFirstName(firstName);
+        userToUpdate.setLastName(lastName);
+        userToUpdate.setEmail(email);
+        userToUpdate.setAbout(about);
+        return userRepository.save(userToUpdate);
     }
 
     @Override
@@ -245,7 +259,8 @@ public class UsersServiceImpl implements UsersService {
 
     @Override
     public UserResponse userToUserResponse(Users user) {
-        UsersBase authUser = userRepository.findByUsername("test").get();
+        System.out.println("MY USER:"+user.getUsername());
+        UsersBase authUser = userRepository.findByUsername(user.getUsername()).get();
         return UserResponse.builder()
                 .user(user)
                 .followedByAuthUser(user.getFollowerUsers().contains(authUser))
@@ -326,8 +341,19 @@ public class UsersServiceImpl implements UsersService {
     }
 
     @Override
-    public List<Users> getJoiners(String organizationName) {
-        return organizationRepository.findByOrganizationName(organizationName).getJoiners();
+    public List<JoinerResponse> getJoiners(String organizationName) {
+
+        List<JoinerResponse> joinerResponses = new ArrayList<>();
+        List<Users> joiners = organizationRepository.findByOrganizationName(organizationName).getJoiners();
+        joiners.forEach(joiner -> joinerResponses.add(JoinerResponse.builder()
+                        .name(joiner.getFirstName() + " " + joiner.getLastName())
+                        .profilePicture(joiner.getProfilePhoto())
+                        .email(joiner.getEmail())
+                        .phone(joiner.getPhone())
+                        .country(joiner.getCountry())
+                        .date(joiner.getOrganizationJoiningActivities().stream().filter(organization -> organization.getOrganization().getOrganizationName().equals(organizationName)).findFirst().get().getDate())
+                .build()));
+        return joinerResponses;
     }
 
     @Override
@@ -378,7 +404,7 @@ public class UsersServiceImpl implements UsersService {
 
     @Override
     public OrganizationDTO getOrganizationData(String username) {
-        List<OrganizationDTO> organizationDTOS = userRepository.findOrganizationNamesByUsername(username);
+        List<OrganizationDTO> organizationDTOS = organizationRepository.findOrganizationNamesByUsername(username);
         if (!organizationDTOS.isEmpty()) {
             return organizationDTOS.get(0);
         }

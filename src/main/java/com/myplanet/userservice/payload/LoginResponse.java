@@ -15,4 +15,6 @@ public class LoginResponse {
     private UserDetails users;
     private String jwtToken;
     private String type;
+
+    private byte[] profilePhoto;
 }

@@ -5,10 +5,10 @@ import com.myplanet.userservice.domain.Role;
 import com.myplanet.userservice.domain.UserResponse;
 import com.myplanet.userservice.domain.Users;
 import com.myplanet.userservice.domain.UsersBase;
-import com.myplanet.userservice.payload.CountryChartDataResponse;
-import com.myplanet.userservice.payload.OrganizationDTO;
-import com.myplanet.userservice.payload.SignupRequest;
+import com.myplanet.userservice.payload.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface UsersService {
@@ -21,10 +21,12 @@ public interface UsersService {
     Users saveUser(Users user);
     Role saveRole(Role role);
 
-    UsersBase getUser(String username);
+    Users getUser(String username);
     List<Users> getUsers();
 
     Users getUserById(Long id);
+
+    Users updateUserProfile(MultipartFile profile, MultipartFile cover, String username, String firstName, String lastName, String email, String phone, String about) throws IOException;
 
     UsersBase getUserByUsername(String username);
 
@@ -52,7 +54,7 @@ public interface UsersService {
 
     List<Users> getJoinersByRegion(Long organizationId, String country);
 
-    List<Users> getJoiners(String organizationName);
+    List<JoinerResponse> getJoiners(String organizationName);
 
     UsersBase plantTree(Long userId, Long trees);
 
