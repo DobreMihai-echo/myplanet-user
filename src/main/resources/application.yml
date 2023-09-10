@@ -1,0 +1,51 @@
+server:
+  port: 8081
+spring:
+  kafka:
+    producer:
+      bootstrap-servers: localhost:9092
+      key-serializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-serializer: org.apache.kafka.common.serialization.StringDeserializer
+    topic:
+      name: myplanet_notification_topic
+  application:
+    name: user-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/userdb
+    username: password
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+
+#eureka:
+#  client:
+#    serviceUrl:
+#      defaultZone: http://localhost:8761/eureka
+
+#Actuator Prometheus Endpoint
+management:
+  endpoint:
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
+      show-components: always
+      probes:
+        enabled: true
+    shutdown:
+      enabled: true
+    info:
+      env:
+        enabled: true
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, metrics, info, health, shutdown, beans
