@@ -4,10 +4,7 @@ package com.myplanet.userservice.domain;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import javax.persistence.*;
@@ -43,4 +40,8 @@ public class Organization extends UsersBase {
             inverseJoinColumns = @JoinColumn(name = "joiner_id")
     )
     private List<Users> joiners = new ArrayList<>();
+
+    @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<OrganizationMemberPoints> organizationMembers = new ArrayList<>();
 }

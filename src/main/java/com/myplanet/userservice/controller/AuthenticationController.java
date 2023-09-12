@@ -35,7 +35,10 @@ public class AuthenticationController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            System.out.println("LOGIN REQUEST:" + loginRequest);
+            if (!service.existsByUsername(loginRequest.getUsername())) {
+                return ResponseEntity.badRequest().body("Username doesn't exist");
+            }
+
             Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
                     loginRequest.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -47,15 +50,18 @@ public class AuthenticationController {
                             .type("Bearer ")
                     .build());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("ERROR " + e.getMessage());
+            return ResponseEntity.internalServerError().body(e.getMessage());
         }
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody SignupRequest request) throws JsonProcessingException {
-        UsersBase usersBase = service.registerUser(request);
-
-        return ResponseEntity.ok(usersBase);
+        try {
+            UsersBase usersBase = service.registerUser(request);
+            return ResponseEntity.ok(usersBase);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping("/confirm")

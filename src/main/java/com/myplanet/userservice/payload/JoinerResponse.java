@@ -15,11 +15,12 @@ import java.util.List;
 @NoArgsConstructor
 public class JoinerResponse {
 
+    private String username;
     private byte[] profilePicture;
     private String name;
     private String email;
     private String phone;
     private LocalDate date;
     private String country;
-    private Role roles;
+    private List<Role> roles;
 }

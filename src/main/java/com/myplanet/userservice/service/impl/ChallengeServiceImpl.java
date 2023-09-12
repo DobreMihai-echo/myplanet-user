@@ -1,13 +1,15 @@
 package com.myplanet.userservice.service.impl;
 
-import com.myplanet.userservice.domain.Challenge;
-import com.myplanet.userservice.domain.ChallengeRequest;
+import com.myplanet.userservice.domain.*;
 import com.myplanet.userservice.repository.ChallengeRepository;
+import com.myplanet.userservice.repository.OrganizationMemberRepository;
+import com.myplanet.userservice.repository.UsersRepository;
 import com.myplanet.userservice.service.ChallengeService;
 import com.myplanet.userservice.service.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,8 +23,24 @@ public class ChallengeServiceImpl implements ChallengeService {
     @Autowired
     private UsersService usersService;
 
-    public Challenge saveChallenge(String type,ChallengeRequest challenge) {
-        System.out.println("Challenge");
+    @Autowired
+    private UsersRepository usersRepository;
+
+    @Autowired
+    private OrganizationMemberRepository organizationMemberRepository;
+
+    public Challenge saveChallenge(Boolean isOrganizationLevel,ChallengeRequest challenge) {
+        if (isOrganizationLevel) {
+            Organization organization = usersService.getAuthenticatedUser().getOrganizationJoiningActivities().get(0).getOrganization();
+            return repository.save(Challenge.builder()
+                            .creator(usersService.getAuthenticatedUser())
+                            .organization(organization)
+                            .points(challenge.getPoints())
+                            .title(challenge.getTitle())
+                            .description(challenge.getDescription())
+                            .level(challenge.getPoints()<30?"Easy":challenge.getPoints()<70?"Medium":"Hard")
+                    .build());
+        }
         return repository.save(Challenge.builder()
                 .creator(usersService.getAuthenticatedUser())
                 .level(challenge.getPoints()<30?"Easy":challenge.getPoints()<70?"Medium":"Hard")
@@ -32,10 +50,12 @@ public class ChallengeServiceImpl implements ChallengeService {
                 .build());
     }
 
-    public List<Challenge> getAllChallenges(String username) {
+    public List<Challenge> getAllChallenges(Boolean isOrganizationLevel) {
 
-        List<Challenge> challenges = repository.findAll();
-        return challenges.stream().filter(challenge -> !challenge.getChallengeJoiners().contains(username) && !challenge.getCompletedJoiners().contains(username)).collect(Collectors.toList());
+        if (isOrganizationLevel) {
+            return repository.findUnjoinedChallengesByOrganization(usersService.getAuthenticatedUser(),usersService.getAuthenticatedUser().getOrganizationJoiningActivities().get(0).getOrganization().getOrganizationName());
+        }
+        return repository.findUnjoinedChallengesWithoutOrganization(usersService.getAuthenticatedUser());
     }
 
     public Challenge getChallengeById(Long id) {
@@ -67,28 +87,39 @@ public class ChallengeServiceImpl implements ChallengeService {
         }
     }
 
-    public void joinChallenge(List<Long> challengeId, String username) {
-        List<Challenge> knownOngoingChallenges = repository.findAll();
-        knownOngoingChallenges = knownOngoingChallenges.stream().filter(challenge -> challenge.getChallengeJoiners().contains(username)).collect(Collectors.toList());
-        for (Challenge knownChallenges: knownOngoingChallenges) {
-            if (!challengeId.contains(knownChallenges.getId())) {
-                knownChallenges.getChallengeJoiners().remove(username);
-                repository.save(knownChallenges);
-            }
-        }
+    public void joinChallenge(List<Long> challengeId) {
         for (Long id: challengeId) {
             Challenge challenge = repository.findById(id).orElseThrow(RuntimeException::new);
-            if (!challenge.getChallengeJoiners().contains(username)) {
+            if (!challenge.getChallengeJoiners().contains(usersService.getAuthenticatedUser())) {
                 challenge.getChallengeJoiners().add(usersService.getAuthenticatedUser());
                 repository.save(challenge);
             }
         }
     }
 
-    public void completeChallenge(Long challengeId, String username) {
+    public void completeChallenge(Long challengeId) {
         Challenge challenge = repository.findById(challengeId).orElseThrow(RuntimeException::new);
-        challenge.getChallengeJoiners().remove(username);
+        challenge.getChallengeJoiners().remove(usersService.getAuthenticatedUser());
         challenge.getCompletedJoiners().add(usersService.getAuthenticatedUser());
+        if (challenge.getOrganization() != null) {
+            OrganizationMemberPoints organizationMemberPoints = organizationMemberRepository.getOrganizationMemberPointsByUsersAndOrganization(usersService.getAuthenticatedUser(),challenge.getOrganization());
+            if (organizationMemberPoints == null) {
+                organizationMemberPoints = OrganizationMemberPoints
+                        .builder()
+                        .organization(challenge.getOrganization())
+                        .points(0L)
+                        .pointsMonth(0L)
+                        .pointsYear(0L)
+                        .users(usersService.getAuthenticatedUser())
+                        .lastUpdated(LocalDate.now())
+                        .build();
+            }
+            addPoints(organizationMemberPoints,challenge.getPoints());
+            organizationMemberRepository.save(organizationMemberPoints);
+        }
+        Users authenticatedUser = usersService.getAuthenticatedUser();
+        authenticatedUser.setPoints(authenticatedUser.getPoints() + challenge.getPoints());
+        usersRepository.save(authenticatedUser);
         repository.save(challenge);
     }
 
@@ -98,13 +129,44 @@ public class ChallengeServiceImpl implements ChallengeService {
         repository.save(challenge);
     }
 
-    public List<Challenge> getOngoingChallengesForUser(String username) {
-        List<Challenge> allChallenges = repository.findAll();
-        return allChallenges.stream().filter(challenge -> challenge.getChallengeJoiners().contains(username)).collect(Collectors.toList());
+    public List<Challenge> getOngoingChallengesForUser(Boolean isOrganizationLevel) {
+        if (isOrganizationLevel) {
+            System.out.println("CURRENTLY AUTHENTICATED USER:" + usersService.getAuthenticatedUser());
+            return repository.findNotCompletedChallengesByUserAndOrganization(usersService.getAuthenticatedUser(),usersService.getAuthenticatedUser().getOrganizationJoiningActivities().get(0).getOrganization());
+        }
+        return repository.findNotCompletedChallengesByUserWithoutOrganization(usersService.getAuthenticatedUser());
     }
 
     public List<Challenge> getCompletedChallengesForUser(String username) {
         List<Challenge> allChallenges = repository.findAll();
         return allChallenges.stream().filter(challenge -> challenge.getCompletedJoiners().contains(username)).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Challenge> getChallengesAtOrganizationLevel(String organizationName) {
+        return repository.findUnjoinedChallengesByOrganization(usersService.getAuthenticatedUser(),organizationName);
+    }
+
+    public void addPoints(OrganizationMemberPoints organizationMemberPoints, Long newPoints) {
+        LocalDate today = LocalDate.now();
+
+        System.out.println("ORG" + organizationMemberPoints);
+        if (organizationMemberPoints.getLastUpdated()!= null && !today.equals(organizationMemberPoints.getLastUpdated())) {
+            if (today.getYear() != organizationMemberPoints.getLastUpdated().getYear()) {
+                organizationMemberPoints.setPointsYear(0L);
+            }
+
+            if (today.getMonthValue() != organizationMemberPoints.getLastUpdated().getMonthValue()) {
+                organizationMemberPoints.setPointsMonth(0L);
+            }
+            organizationMemberPoints.setPoints(0L);
+        }
+
+        organizationMemberPoints.setPoints(organizationMemberPoints.getPoints() + newPoints);
+        organizationMemberPoints.setPointsMonth(organizationMemberPoints.getPointsMonth() + newPoints);
+        organizationMemberPoints.setPointsYear(organizationMemberPoints.getPointsYear() + newPoints);
+
+        organizationMemberPoints.setLastUpdated(today);
+        organizationMemberRepository.save(organizationMemberPoints);
     }
 }

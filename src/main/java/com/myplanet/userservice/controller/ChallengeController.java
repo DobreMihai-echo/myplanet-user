@@ -22,15 +22,20 @@ public class ChallengeController {
         return ResponseEntity.ok(service.getChallengeById(id));
     }
 
+    @GetMapping("/organization")
+    public ResponseEntity<?> getChallengesAtOrganization(@RequestParam(name = "organizationName") String organizationName) {
+        return ResponseEntity.ok(service.getChallengesAtOrganizationLevel(organizationName));
+    }
+
     @GetMapping("/all")
-    public ResponseEntity<List<Challenge>> getAll(@RequestParam(name = "username") String username) {
-        return ResponseEntity.ok(service.getAllChallenges(username));
+    public ResponseEntity<List<Challenge>> getAll(@RequestParam(name = "isOrganizationLevel") Boolean isOrganizationLevel) {
+        return ResponseEntity.ok(service.getAllChallenges(isOrganizationLevel));
     }
 
     @PostMapping()
-    public ResponseEntity<?> save(@RequestParam(name = "type") String type,@RequestBody ChallengeRequest challengeRequest) {
+    public ResponseEntity<?> save(@RequestParam(name = "isOrganizationLevel") Boolean isOrganizationLevel,@RequestBody ChallengeRequest challengeRequest) {
         try {
-            return ResponseEntity.ok(service.saveChallenge(type,challengeRequest));
+            return ResponseEntity.ok(service.saveChallenge(isOrganizationLevel,challengeRequest));
         } catch (Exception ex) {
             return ResponseEntity.internalServerError().body(ex.getMessage());
         }
@@ -55,9 +60,9 @@ public class ChallengeController {
     }
 
     @PutMapping("/join")
-    public ResponseEntity<?> join(@RequestBody List<Long> challengeId, @RequestParam(name = "username") String username) {
+    public ResponseEntity<?> join(@RequestBody List<Long> challengeId) {
         try {
-            service.joinChallenge(challengeId, username);
+            service.joinChallenge(challengeId);
             return ResponseEntity.ok("Success");
         } catch (Exception ex) {
             return ResponseEntity.internalServerError().body("Nope");
@@ -75,9 +80,9 @@ public class ChallengeController {
     }
 
     @GetMapping("/ongoing")
-    public ResponseEntity<?> getOngoingChallengesForUser(@RequestParam(name = "username") String username) {
+    public ResponseEntity<?> getOngoingChallengesForUser(@RequestParam(name = "isOrganizationLevel") Boolean isOrganizationLevel) {
         try {
-            return ResponseEntity.ok(service.getOngoingChallengesForUser(username));
+            return ResponseEntity.ok(service.getOngoingChallengesForUser(isOrganizationLevel));
         } catch (Exception ex) {
             return ResponseEntity.internalServerError().body("There was a problem");
         }
@@ -93,8 +98,8 @@ public class ChallengeController {
     }
 
     @PutMapping("/complete")
-    public ResponseEntity<?> completeChallenge(@RequestParam(name = "challengeID") Long id,@RequestParam(name = "username") String username) {
-        service.completeChallenge(id,username);
+    public ResponseEntity<?> completeChallenge(@RequestParam(name = "challengeID") Long id) {
+        service.completeChallenge(id);
         return ResponseEntity.ok("OK");
     }
 }

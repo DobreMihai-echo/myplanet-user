@@ -41,10 +41,9 @@ public class SecurityConfig  {
                 .antMatchers("/api/user/**").hasAnyRole(USER.name(),ORGANIZATION.name())
                 .antMatchers("/api/organization/join").hasAnyRole(USER.name())
 
-                .antMatchers(HttpMethod.GET,"/api/organization/**").hasAnyRole(USER.name(),ORGANIZATION_MANAGER.name(),ORGANIZATION_CREATE.name(),ORGANIZATION_UPDATE.name(),ORGANIZATION_DELETE.name())
-                .antMatchers(HttpMethod.POST,"/api/organization/**").hasAuthority(ORGANIZATION_MANAGER.name())
-                .antMatchers(HttpMethod.PUT,"/api/organization/**").hasAuthority(ORGANIZATION_MANAGER.name())
-                .antMatchers(HttpMethod.DELETE,"/api/organization/**").hasAuthority(ORGANIZATION_MANAGER.name())
+                .antMatchers(HttpMethod.GET,"/api/organization/**").hasAnyRole(ORGANIZATION.name(),USER.name(),ORGANIZATION_MANAGER.name(),ORGANIZATION_CREATE.name(),ORGANIZATION_UPDATE.name(),ORGANIZATION_DELETE.name())
+                .antMatchers(HttpMethod.POST,"/api/organization/**").hasAnyAuthority(ORGANIZATION.name(),ORGANIZATION_MANAGER.name())
+                .antMatchers(HttpMethod.DELETE,"/api/organization/**").hasAnyAuthority(ORGANIZATION.name(),ORGANIZATION_MANAGER.name())
                 .antMatchers("/api/organization/**").hasAnyRole(ORGANIZATION.name())
                 .antMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated();

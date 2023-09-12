@@ -14,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,6 +39,7 @@ public class UsersServiceImpl implements UsersService {
     private final RolesRepository rolesRepository;
     private final ConfirmationTokenService confirmationTokenService;
     private final TreePlantingRepository treePlantingRepository;
+    private final OrganizationMemberRepository organizationMemberRepository;
 
     private final PasswordEncoder encoder;
 
@@ -111,8 +113,9 @@ public class UsersServiceImpl implements UsersService {
 
         confirmationTokenService.generateConfirmationToken(confirmationToken);
 
-        String link = "http://34.125.50.145:9761/api/auth/confirm?token=" + token;
+//        String link = "http://34.125.50.145:9761/api/auth/confirm?token=" + token;
 
+        String link = "http://localhost:8081/api/auth/confirm?token=" + token;
         Message message = Message.builder()
                 .toEmail(user.getEmail())
                 .username(user.getUsername())
@@ -126,6 +129,11 @@ public class UsersServiceImpl implements UsersService {
         String jsonString = objectMapper.writeValueAsString(message);
         kafkaTemplate.send("myplanet_notification_topic", jsonString);
         return user;
+    }
+
+    @Override
+    public Boolean existsByUsername(String username) {
+        return userBaseRepository.existsByUsername(username);
     }
 
     @Override
@@ -299,39 +307,42 @@ public class UsersServiceImpl implements UsersService {
     }
 
     @Override
-    public void joinOrganization(Long organizationId) {
+    public Collection<? extends GrantedAuthority> joinOrganization(String organizationName) {
         Users authUser = getAuthenticatedUser();
-        if (!authUser.getId().equals(organizationId)) {
-            Organization organizationToJoin = organizationRepository.getById(organizationId);
-            organizationToJoin.getJoiners().add(authUser);
-            organizationToJoin.getOrganizationJoiningActivities().add(OrganizationJoiningActivity
-                    .builder()
-                            .organization(organizationToJoin)
-                            .users(authUser)
-                            .date(LocalDate.now())
-                    .build());
-            organizationRepository.save(organizationToJoin);
-            authUser.getRoles().add(new Role(ERole.ORGANIZATION_USER));
-            userRepository.save(authUser);
-        } else {
-            throw new RuntimeException();
-        }
+        Organization organizationToJoin = organizationRepository.findByOrganizationName(organizationName);
+        organizationToJoin.getJoiners().add(authUser);
+        organizationToJoin.getOrganizationJoiningActivities().add(OrganizationJoiningActivity
+                .builder()
+                .organization(organizationToJoin)
+                .users(authUser)
+                .date(LocalDate.now())
+                .build());
+        organizationRepository.save(organizationToJoin);
+        authUser.getRoles().add(new Role(ERole.ORGANIZATION_USER));
+        userRepository.save(authUser);
+
+        return authUser.getAuthorities();
     }
 
     @Override
-    public Users addRole(String roleToAdd, Long organizationID, Long userID) {
-        Users userToAddRole = userRepository.findById(userID).orElseThrow();
-        if (!userToAddRole.getId().equals(organizationID)) {
-            Organization organization = organizationRepository.getById(organizationID);
-            if (organization.getJoiners().contains(userToAddRole)) {
-                if (rolesRepository.existsByName(ERole.valueOf(roleToAdd))) {
-                    userToAddRole.getRoles().add(rolesRepository.findByName(ERole.valueOf(roleToAdd)));
-                } else {
-                    userToAddRole.getRoles().add(new Role(ERole.valueOf(roleToAdd)));
-                }
+    public Users addRole(String roleToAdd, String username) {
+        Users userToAddRole = userRepository.findByUsername(username).orElseThrow();
+        Organization organization = organizationRepository.findByOrganizationName(userToAddRole.getOrganizationJoiningActivities().get(0).getOrganization().getOrganizationName());
+        if (organization.getJoiners().contains(userToAddRole)) {
+            String role = "";
+            switch (roleToAdd) {
+                case "Manager": role="ORGANIZATION_MANAGER";
+                                break;
+                case "User": role="ORGANIZATION_USER";
+            }
+            if (rolesRepository.existsByName(ERole.valueOf(role))) {
+                userToAddRole.getRoles().add(rolesRepository.findByName(ERole.valueOf(role)));
+            } else {
+                userToAddRole.getRoles().add(new Role(ERole.valueOf(role)));
             }
         }
 
+        System.out.println("USER WITH THE ROLES G" + userToAddRole.getRoles());
         return userRepository.save(userToAddRole);
     }
 
@@ -341,17 +352,26 @@ public class UsersServiceImpl implements UsersService {
     }
 
     @Override
-    public List<JoinerResponse> getJoiners(String organizationName) {
+    public List<JoinerResponse> getJoiners(String username) {
 
+        String organizationName;
+        if(organizationRepository.existsByUsername(username)) {
+            organizationName = organizationRepository.findByUsername(username).get().getOrganizationName();
+        } else {
+            organizationName = userRepository.findByUsername(username).get().getOrganizationJoiningActivities().get(0).getOrganization().getOrganizationName();
+        }
         List<JoinerResponse> joinerResponses = new ArrayList<>();
         List<Users> joiners = organizationRepository.findByOrganizationName(organizationName).getJoiners();
+        String finalOrganizationName = organizationName;
         joiners.forEach(joiner -> joinerResponses.add(JoinerResponse.builder()
+                        .username(joiner.getUsername())
                         .name(joiner.getFirstName() + " " + joiner.getLastName())
                         .profilePicture(joiner.getProfilePhoto())
                         .email(joiner.getEmail())
                         .phone(joiner.getPhone())
                         .country(joiner.getCountry())
-                        .date(joiner.getOrganizationJoiningActivities().stream().filter(organization -> organization.getOrganization().getOrganizationName().equals(organizationName)).findFirst().get().getDate())
+                        .roles(joiner.getRoles())
+                        .date(joiner.getOrganizationJoiningActivities().stream().filter(organization -> organization.getOrganization().getOrganizationName().equals(finalOrganizationName)).findFirst().get().getDate())
                 .build()));
         return joinerResponses;
     }
@@ -409,6 +429,32 @@ public class UsersServiceImpl implements UsersService {
             return organizationDTOS.get(0);
         }
         return null;
+    }
+
+    @Override
+    public List<OrganizationsPayload> getOrganizations() {
+        return organizationRepository.findAll().stream().map(organization -> OrganizationsPayload.builder()
+                .name(organization.getOrganizationName())
+                .email(organization.getEmail())
+                .joiners(organization.getJoiners().size())
+                .phone(organization.getPhone())
+                .build()).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<LeaderboardPayload> getLeaderboardForOrganization() {
+        List<LeaderboardPayload> payloads = new ArrayList<>();
+
+        List<OrganizationMemberPoints> memberPoints = organizationMemberRepository.findByOrganization_OrganizationNameOrderByPoints(this.getAuthenticatedUser().getOrganizationJoiningActivities().get(0).getOrganization().getOrganizationName());
+
+        return memberPoints.stream().map(members -> LeaderboardPayload.builder()
+                .profilePhoto(members.getUsers().getProfilePhoto())
+                .pointsYear(members.getPointsYear())
+                .pointsMonth(members.getPointsMonth())
+                .points(members.getPoints())
+                .firstName(members.getUsers().getFirstName())
+                .lastName(members.getUsers().getLastName())
+                .build()).collect(Collectors.toList());
     }
 
     private List<TreeDataResponse> convertToTreeDataResponse(List<Object[]> results){

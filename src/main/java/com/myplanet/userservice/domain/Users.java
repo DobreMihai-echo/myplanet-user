@@ -46,7 +46,10 @@ public class Users extends UsersBase{
     @OneToMany(mappedBy = "users", cascade = CascadeType.ALL)
     private List<OrganizationJoiningActivity> organizationJoiningActivities;
 
-    @OneToMany(mappedBy = "users", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "users",fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JsonIgnore
+    @JsonManagedReference
+    @ToString.Exclude
     private List<CarbonFootprint> carbonFootprints;
 
     private String about;
@@ -58,6 +61,7 @@ public class Users extends UsersBase{
 
     @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY)
+    @ToString.Exclude
     @JoinTable(
             name = "follow_users",
             joinColumns = @JoinColumn(name = "followed_id"),
@@ -66,8 +70,14 @@ public class Users extends UsersBase{
     private List<Users> followerUsers = new ArrayList<>();
 
     @JsonIgnore
+    @ToString.Exclude
     @ManyToMany(fetch = FetchType.LAZY, mappedBy = "followerUsers")
     private List<Users> followingUsers = new ArrayList<>();
+
+    @JsonIgnore
+    @ToString.Exclude
+    @OneToMany(mappedBy = "users", cascade = CascadeType.ALL)
+    private List<OrganizationMemberPoints> organizationMembers = new ArrayList<>();
 
     @Column(name = "points")
     private Double points;

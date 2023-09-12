@@ -1,19 +1,20 @@
 package com.myplanet.userservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.myplanet.userservice.domain.Role;
-import com.myplanet.userservice.domain.UserResponse;
-import com.myplanet.userservice.domain.Users;
-import com.myplanet.userservice.domain.UsersBase;
+import com.myplanet.userservice.domain.*;
 import com.myplanet.userservice.payload.*;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 public interface UsersService {
 
     UsersBase registerUser(SignupRequest request) throws JsonProcessingException;
+
+    Boolean existsByUsername(String username);
 
     String confirmToken(String token);
 
@@ -48,13 +49,13 @@ public interface UsersService {
 
     UsersBase addPoints(Double points);
 
-    void joinOrganization(Long organizationId);
+    Collection<? extends GrantedAuthority> joinOrganization(String organizationName);
 
-    UsersBase addRole(String roleToAdd, Long organizationID, Long userID);
+    UsersBase addRole(String roleToAdd, String username);
 
     List<Users> getJoinersByRegion(Long organizationId, String country);
 
-    List<JoinerResponse> getJoiners(String organizationName);
+    List<JoinerResponse> getJoiners(String username);
 
     UsersBase plantTree(Long userId, Long trees);
 
@@ -64,5 +65,8 @@ public interface UsersService {
 
     OrganizationDTO getOrganizationData(String username);
 
+    List<OrganizationsPayload> getOrganizations();
+
+    List<LeaderboardPayload> getLeaderboardForOrganization();
 
 }

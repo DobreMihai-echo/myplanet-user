@@ -18,10 +18,6 @@ public class ChallengeRequest {
 
     private String description;
 
-    private Users creator;
-
-    private Organization organization;
-
     private String level;
 
     private Long points;

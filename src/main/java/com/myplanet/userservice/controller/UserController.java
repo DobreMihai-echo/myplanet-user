@@ -1,9 +1,7 @@
 package com.myplanet.userservice.controller;
 
-import com.myplanet.userservice.domain.Role;
-import com.myplanet.userservice.domain.UserResponse;
-import com.myplanet.userservice.domain.Users;
-import com.myplanet.userservice.domain.UsersBase;
+import com.myplanet.userservice.domain.*;
+import com.myplanet.userservice.payload.LeaderboardPayload;
 import com.myplanet.userservice.payload.RoleToUser;
 import com.myplanet.userservice.payload.UserProfileRequest;
 import com.myplanet.userservice.service.UsersService;
@@ -122,6 +120,11 @@ public class UserController {
         return ResponseEntity.ok(service.getOrganizationData(username));
     }
 
+    @GetMapping(value = "/users/organizations/all")
+    public ResponseEntity<?> getAllOrganizations() {
+        return ResponseEntity.ok(service.getOrganizations());
+    }
+
     @PutMapping(value = "/user/profile", consumes = "multipart/form-data")
     public ResponseEntity<?> editProfile(@RequestParam(name = "profilePicture")MultipartFile profile, @RequestParam(name = "coverPicture") MultipartFile cover,@RequestParam(name = "username") String username, @RequestParam(name = "firstName") String firstName, @RequestParam(name = "lastName") String lastName, @RequestParam(name = "email") String email,@RequestParam(name = "phone") String phone , @RequestParam(name = "about") String about) {
         try {
@@ -132,9 +135,8 @@ public class UserController {
     }
 
     @PutMapping(value = "/organization/join")
-    public ResponseEntity<?> joinOrganization(@RequestParam Long organizationId) {
-        service.joinOrganization(organizationId);
-        return ResponseEntity.ok("Joined organization");
+    public ResponseEntity<?> joinOrganization(@RequestParam String organizationName) {
+        return ResponseEntity.ok(service.joinOrganization(organizationName));
     }
 
     @GetMapping(value = "/organization")
@@ -143,13 +145,13 @@ public class UserController {
     }
 
     @GetMapping(value = "/organization/joiners")
-    public ResponseEntity<?> getJoiners(@RequestParam(name = "organizationName") String organizationName) {
-        return ResponseEntity.ok(service.getJoiners(organizationName));
+    public ResponseEntity<?> getJoiners(@RequestParam(name = "username") String username) {
+        return ResponseEntity.ok(service.getJoiners(username));
     }
 
     @PutMapping(value = "/organization/addRole")
-    public ResponseEntity<?> addRole(@RequestParam(name = "role") String role, @RequestParam(name = "organizationID") Long organizationID, @RequestParam(name = "userID") Long userID) {
-        return ResponseEntity.ok(service.addRole(role,organizationID,userID));
+    public ResponseEntity<?> addRole(@RequestParam(name = "role") String role, @RequestParam(name = "username") String username) {
+        return ResponseEntity.ok(service.addRole(role,username));
     }
 
     @PutMapping(value = "/user/plant-trees")
@@ -160,5 +162,11 @@ public class UserController {
     @GetMapping(value = "/organization/chart")
     public ResponseEntity<?> chartData(@RequestParam(name = "country") String country, @RequestParam(name = "organizationID") Long organizationID) {
         return ResponseEntity.ok(service.getInformation(country,organizationID));
+    }
+
+    @GetMapping("/organization/leaderboard")
+    public ResponseEntity<List<LeaderboardPayload>> getMembersSortedByPoints() {
+        List<LeaderboardPayload> sortedMembers = service.getLeaderboardForOrganization();
+        return new ResponseEntity<>(sortedMembers, HttpStatus.OK);
     }
 }

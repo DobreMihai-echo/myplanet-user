@@ -1,5 +1,6 @@
 package com.myplanet.userservice.domain;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +34,7 @@ public class CarbonFootprint {
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
     @JsonIgnore
+    @JsonBackReference
     private Users users;
 
 
